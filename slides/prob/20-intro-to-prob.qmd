@@ -355,7 +355,7 @@ set.seed(2020-10-13)
 
 - We will not cover this but you should know the function `expand.grid` 
 
-- and the **gtools** functions `permutatios` and `combinations`.
+- and the **gtools** functions `permutations` and `combinations`.
 
 
 ## Combinations and permutations
@@ -510,7 +510,7 @@ $$
 
 ## Probability density function
 
-- This sum can be written as Reimann sum that is approximated by an integral:
+- This sum can be written as Riemann sum that is approximated by an integral:
 
 ```{r echo=FALSE} 
 cont <- data.frame(x = seq(0, 5, len = 300), y = dgamma(seq(0, 5, len = 300), 2, 2)) 

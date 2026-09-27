@@ -1,0 +1,94 @@
+---
+title: "Improvised material 23 Sept 2026"
+keywords: "Probability"
+date: 2025-09-23
+format: html
+---
+
+# Modeling cards and shuffled decks
+
+We followed online code to produce
+```{r do1}
+suits <- c("Spades", "Hearts", "Diamonds", "Clubs")
+ranks <- c("Ace", 2:10, "Jack", "Queen", "King")
+# Combine ranks and suits to make 52 unique cards
+deck <- paste(rep(ranks, 4), rep(suits, each = 13))
+```
+A deck is a vector with 52 elements.
+This vector "models" a deck of playing cards.
+
+With R's `sample` function, we can model shuffling.
+We use `set.seed` to obtain a reproducible random
+number generation state.
+
+```{r lkshuf}
+set.seed(1234)
+sample(deck, 1)
+sample(deck, 1)
+set.seed(1234)
+sample(deck, 1)
+```
+
+A reproducible series of draws of the "top card" from the repeatedly shuffled deck.
+```{r lk1}
+set.seed(123)
+draws = replicate(1000, sample(deck,size=1))
+mean(table(draws))-1000/52
+hist(table(draws), 20)
+plot(table(draws), las=2, cex.axis=.7)
+```
+
+
+
+
+# Exploring the US CDC API
+
+We visited the CDC dataset section:
+
+![CDC topics](./cdcsets.jpg)
+
+I used the old-fashioned httr package to extract a file
+on waterborne illness.
+```{r lkcd,eval=FALSE}
+library(httr)
+z = GET("https://data.cdc.gov/api/v3/views/5xkq-dg7x/query.json")
+zc = content(z)
+```
+
+To see the tree structure of the data
+```{r lkli,eval=FALSE}
+library(listviewer)
+jsonedit(zc)
+```
+
+
+We will have exercises related to this dataset.  But let's have
+one exploration.  Let's look for the largest waterborne outbreak
+in the dataset.  How should we compute `nill` so
+that the following succeeds?  Can you verify the report?
+
+```
+> which(as.numeric(nill)>10000)
+[1] 510 652 872
+> summary(as.numeric(nill))
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max.
+     2.00      5.00     14.00     33.25     30.00 403000.00
+> which(as.numeric(nill)>100000)
+[1] 872
+> unlist(zc[[872]])
+                       :id                   :version
+      "row-b73t.nv5m_99ab"        "rv-3pp5.uift.8zmu"
+               :created_at                :updated_at
+"2024-12-20T19:57:31.962Z" "2024-12-20T19:57:31.962Z"
+                      year                      month
+                    "1993"                        "3"
+                     state               primary_mode
+               "Wisconsin"                    "Water"
+                  etiology            etiology_status
+  "Cryptosporidium parvum"                "Confirmed"
+                   setting                  illnesses
+  "Community/municipality"                   "403000"
+                    deaths             water_exposure
+                      "50"           "Drinking water"
+```
+
