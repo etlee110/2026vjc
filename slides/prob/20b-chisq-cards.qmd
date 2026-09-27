@@ -1,0 +1,230 @@
+---
+title: "Chi-squared tests for unfair decks"
+keywords: "Probability"
+date: 2026-09-27
+format: html
+---
+
+## Modeling cards and shuffled decks
+
+### Decks as vectors
+
+We followed online code to produce
+```{r do1}
+suits <- c("Spades", "Hearts", "Diamonds", "Clubs")
+ranks <- c("Ace", 2:10, "Jack", "Queen", "King")
+# Combine ranks and suits to make 52 unique cards
+deck <- paste(rep(ranks, 4), rep(suits, each = 13))
+```
+A deck is a vector with 52 elements.
+This vector "models" a deck of playing cards.
+
+## Draws as samples
+
+With R's `sample` function, we can model shuffling.
+We use `set.seed` to obtain a reproducible random
+number generation state.
+
+```{r lkshuf}
+top_card = function(x) { 
+   stopifnot(length(x)==52, is.atomic(x))
+   sample(x, size=1)
+}
+set.seed(1234)
+drs = replicate(2000, top_card(deck))
+head(table(drs))
+mean(table(drs))
+2000/52
+```
+
+## A model for fairness
+
+### Intuitions
+
+For a fair deck with thorough shuffling and replacement, we 
+have an intuition that each
+card type has the same chance of being drawn as the top card.
+
+In 2000 draws, the _expected_ number of appearances of "2 Hearts"
+is 2000/52, and that is the same for all card types.
+
+### Formalism
+
+Formally, we can abstract from the actual names of the cards and
+represent the shuffling/drawing procedure in this way:
+
+Let $i = 1, \ldots, 52$ denote card types
+
+Let $j = 1, \ldots, 2000$ denote shuffle/draw/replace events
+
+Define
+
+$$
+C_{ij} =
+\begin{cases}
+  1 & \text{if draw } j \text{ yields card type } i, \\
+  0 & \text{otherwise.}
+\end{cases}
+$$
+
+Now define $X_i = \sum_j C_{ij}$.  Our statement above about the
+intuitive expectation on the number of appearances of any given
+card type will be written
+$$
+EX_i = 2000/52 \text{ for all } i = 1,\ldots, 52.
+$$
+
+This is equivalent to the following formulation.  Let $p_i, i=1, \ldots, 52$
+denote the _probability_ (not yet defined in any formal way) that our shuffle/draw procedure
+yields card of type $i$.  Then $EX_i = 2000 p_i$ for all $i$.  For the
+general case of $n$ draws, $EX_i = n p_i$.
+
+## Measuring departure from fairness
+
+A well-established metric for assessing departure from fairness is
+called "chi-squared".  We will use the symbol $D$ to represent this
+measure.  Large values of $D$ can be indicative of departure of the
+observed frequencies from the expected values.
+
+$$
+D = \sum_{i=1}^{52} \frac{(X_i - EX_i)^2}{EX_i}
+$$
+
+We'll implement $D$ as `mystat` and show that it is equivalent to
+a quantity computed in R with `chisq.test`.
+
+```{r OmE}
+mystat = function(dat, expected) sum((table(dat)-expected)^2/expected)
+ExpectedCount = 2000/52
+sum((table(drs)-ExpectedCount)^2/ExpectedCount)
+chisq.test(table(drs))
+mystat(drs, ExpectedCount)
+```
+
+Note that `chisq.test` reports the same statistic as `mystat`, but
+includes values for `df` (degrees of freedom) and `p-value`.  "Degrees of freedom"
+refers here to the fact that we have a fixed number of count categories (52 card types),
+and if 51 are known, the value for the 52nd can be deduced -- it is "unfree".
+
+The p-value is a quantity that, when small, can be indicative of
+a departure from the expected outcome of an experiment.  We will
+return to that concept at a later date.
+
+## Replicating our test of fairness many times
+
+Any given collection of shuffle/draw events will yield
+a value of $D$.  Different series will yield different
+values of $D$, but when the deck is fair, the variation
+in $D$ is prescribed by the mathematics of probability.
+
+We will make a histogram of 100 replicates of 2000 draws
+to exhibit variation in $D$.
+
+```{r domore}
+set.seed(1234)
+predist = lapply(1:100, function(x) replicate(2000, top_card(deck)))
+dist = sapply(predist, function(x)mystat(x, expected=2000/52))
+hist(dist, prob=TRUE)
+```
+
+With 1000 replicates, we get a more pleasing display.
+
+```{r domore2, cache=TRUE}
+set.seed(1234)
+predist = lapply(1:1000, function(x) replicate(2000, top_card(deck)))
+dist = sapply(predist, function(x)mystat(x, expected=2000/52))
+hist(dist, probability=TRUE)
+```
+
+The form of this histogram (drawn in R with the `probability` argument set to TRUE)
+can be approximated by the density of the chi-squared distribution
+with 51 degrees of freedom.
+
+```{r lkdens}
+hist(dist, probability=TRUE)
+lines(1:100, dchisq(1:100, 51))
+```
+
+The "51" fixes the degrees of freedom of the model for which
+the density will be drawn.
+
+**Nota bene.**  The fact that we can approximate the shape of the
+histogram for this fairly complicated data generation process,
+using the 'density function' for the chi-squared probability
+model with specified degrees of freedom, is a minor miracle
+building on almost two centuries of mathematical, statistical,
+and computational research and development.
+
+We might as well have a look at the density function for the
+chi-squared distribution with $k$ degrees of freedom:
+
+$$
+f(x; k) =
+\begin{cases}
+  \dfrac{1}{2^{k/2}\,\Gamma(k/2)}\, x^{k/2 - 1} e^{-x/2}, & x > 0, \\[1ex]
+  0, & \text{otherwise},
+\end{cases}
+\qquad k = 1, 2, \ldots
+$$
+
+In our call to `dchisq` we evaluated this function at points $x = 1, 2, ..., 100$
+with $k = 51$.  $e$ is Euler's constant `r round(exp(1),5)`... 
+$= \lim_{n \to \infty} \left(1 + \frac{1}{n}\right)^{n}$ , and $\Gamma$
+denotes the "Gamma function" defined as $\Gamma(x) = \int\limits_{0}^{\infty} e^{-t}t^{x-1}dt$
+which satisfies $\Gamma(x+1) = x\Gamma(x)$.
+
+## Interpret
+
+
+What's the difference between these two runs?
+
+```{r lkbad}
+set.seed(1234)
+baddeck = deck
+baddeck[1] = baddeck[52]
+newdrs = replicate(2000, top_card(baddeck))
+mystat(newdrs, ExpectedCount)
+```
+
+```{r lkbad2}
+set.seed(1234)
+baddeck[2] = baddeck[51]
+newdrs = replicate(2000, top_card(baddeck))
+mystat(newdrs, ExpectedCount)
+```
+
+How is this different?
+
+
+```{r lkbad3}
+set.seed(1234)
+baddeck[2] = baddeck[52]
+newdrs = replicate(2000, top_card(baddeck))
+mystat(newdrs, ExpectedCount)
+```
+
+What's wrong here?
+
+```{r lkbad4}
+set.seed(1234)
+baddeck[2] = baddeck[52]
+newdrs = replicate(1000, top_card(baddeck))
+mystat(newdrs, ExpectedCount)
+```
+
+## CAVEAT
+
+Our theory of the distribution of $D$ depends on a few
+assumptions.  The most important one is that the events
+underlying contributions to $D$ are _independent_.
+
+Establishing independence in real-world contexts is
+often very difficult.  One must be very vigilant,
+searching for hidden sources of dependence between
+events emerging from measurement processes.
+
+## EXERCISE
+
+Go through this document changing the random process from
+sampling from a deck of playing cards to rolling a fair
+or biased 6-sided die.

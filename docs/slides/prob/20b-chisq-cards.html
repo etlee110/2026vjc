@@ -6,10 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="dcterms.date" content="2026-09-23">
+<meta name="dcterms.date" content="2026-09-27">
 <meta name="keywords" content="Probability">
 
-<title>Cards/CDC API, 23 Sept 2026 – DRAFT FOR 2026 fall of BST 260: Introduction to Data Science</title>
+<title>Chi-squared tests for unfair decks – DRAFT FOR 2026 fall of BST 260: Introduction to Data Science</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -110,6 +110,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../../style.css">
 </head>
@@ -123,7 +152,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Cards/CDC API, 23 Sept 2026</li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item">Chi-squared tests for unfair decks</li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -204,17 +233,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#modeling-cards-and-shuffled-decks" id="toc-modeling-cards-and-shuffled-decks" class="nav-link active" data-scroll-target="#modeling-cards-and-shuffled-decks">Modeling cards and shuffled decks</a></li>
-  <li><a href="#exploring-the-us-cdc-api" id="toc-exploring-the-us-cdc-api" class="nav-link" data-scroll-target="#exploring-the-us-cdc-api">Exploring the US CDC API</a></li>
+  <li><a href="#modeling-cards-and-shuffled-decks" id="toc-modeling-cards-and-shuffled-decks" class="nav-link active" data-scroll-target="#modeling-cards-and-shuffled-decks">Modeling cards and shuffled decks</a>
+  <ul class="collapse">
+  <li><a href="#decks-as-vectors" id="toc-decks-as-vectors" class="nav-link" data-scroll-target="#decks-as-vectors">Decks as vectors</a></li>
+  </ul></li>
+  <li><a href="#draws-as-samples" id="toc-draws-as-samples" class="nav-link" data-scroll-target="#draws-as-samples">Draws as samples</a></li>
+  <li><a href="#a-model-for-fairness" id="toc-a-model-for-fairness" class="nav-link" data-scroll-target="#a-model-for-fairness">A model for fairness</a>
+  <ul class="collapse">
+  <li><a href="#intuitions" id="toc-intuitions" class="nav-link" data-scroll-target="#intuitions">Intuitions</a></li>
+  <li><a href="#formalism" id="toc-formalism" class="nav-link" data-scroll-target="#formalism">Formalism</a></li>
+  </ul></li>
+  <li><a href="#measuring-departure-from-fairness" id="toc-measuring-departure-from-fairness" class="nav-link" data-scroll-target="#measuring-departure-from-fairness">Measuring departure from fairness</a></li>
+  <li><a href="#replicating-our-test-of-fairness-many-times" id="toc-replicating-our-test-of-fairness-many-times" class="nav-link" data-scroll-target="#replicating-our-test-of-fairness-many-times">Replicating our test of fairness many times</a></li>
+  <li><a href="#interpret" id="toc-interpret" class="nav-link" data-scroll-target="#interpret">Interpret</a></li>
+  <li><a href="#caveat" id="toc-caveat" class="nav-link" data-scroll-target="#caveat">CAVEAT</a></li>
+  <li><a href="#exercise" id="toc-exercise" class="nav-link" data-scroll-target="#exercise">EXERCISE</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/vjcitn/2026vjc/blob/main/slides/prob/20-sep23-cards-cdc.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/vjcitn/2026vjc/blob/main/slides/prob/20b-chisq-cards.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Cards/CDC API, 23 Sept 2026</h1>
+<h1 class="title">Chi-squared tests for unfair decks</h1>
 </div>
 
 
@@ -225,7 +267,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">September 23, 2026</p>
+      <p class="date">September 27, 2026</p>
     </div>
   </div>
   
@@ -243,8 +285,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="modeling-cards-and-shuffled-decks" class="level1">
-<h1>Modeling cards and shuffled decks</h1>
+<section id="modeling-cards-and-shuffled-decks" class="level2">
+<h2 class="anchored" data-anchor-id="modeling-cards-and-shuffled-decks">Modeling cards and shuffled decks</h2>
+<section id="decks-as-vectors" class="level3">
+<h3 class="anchored" data-anchor-id="decks-as-vectors">Decks as vectors</h3>
 <p>We followed online code to produce</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>suits <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Spades"</span>, <span class="st">"Hearts"</span>, <span class="st">"Diamonds"</span>, <span class="st">"Clubs"</span>)</span>
@@ -253,92 +297,197 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>deck <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="fu">rep</span>(ranks, <span class="dv">4</span>), <span class="fu">rep</span>(suits, <span class="at">each =</span> <span class="dv">13</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>A deck is a vector with 52 elements. This vector “models” a deck of playing cards.</p>
+</section>
+</section>
+<section id="draws-as-samples" class="level2">
+<h2 class="anchored" data-anchor-id="draws-as-samples">Draws as samples</h2>
 <p>With R’s <code>sample</code> function, we can model shuffling. We use <code>set.seed</code> to obtain a reproducible random number generation state.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sample</span>(deck, <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>top_card <span class="ot">=</span> <span class="cf">function</span>(x) { </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>   <span class="fu">stopifnot</span>(<span class="fu">length</span>(x)<span class="sc">==</span><span class="dv">52</span>, <span class="fu">is.atomic</span>(x))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>   <span class="fu">sample</span>(x, <span class="at">size=</span><span class="dv">1</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>drs <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(deck))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(<span class="fu">table</span>(drs))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "2 Diamonds"</code></pre>
+<pre><code>drs
+   10 Clubs 10 Diamonds   10 Hearts   10 Spades     2 Clubs  2 Diamonds 
+         39          36          44          30          43          45 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sample</span>(deck, <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">table</span>(drs))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "3 Hearts"</code></pre>
+<pre><code>[1] 38.46154</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">sample</span>(deck, <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="dv">2000</span><span class="sc">/</span><span class="dv">52</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "2 Diamonds"</code></pre>
-</div>
-</div>
-<p>A reproducible series of draws of the “top card” from the repeatedly shuffled deck.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>draws <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">1000</span>, <span class="fu">sample</span>(deck,<span class="at">size=</span><span class="dv">1</span>))</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(<span class="fu">table</span>(draws))<span class="sc">-</span><span class="dv">1000</span><span class="sc">/</span><span class="dv">52</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 0</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(<span class="fu">table</span>(draws), <span class="dv">20</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="20-sep23-cards-cdc_files/figure-html/lk1-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="fu">table</span>(draws), <span class="at">las=</span><span class="dv">2</span>, <span class="at">cex.axis=</span>.<span class="dv">7</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="20-sep23-cards-cdc_files/figure-html/lk1-2.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
+<pre><code>[1] 38.46154</code></pre>
 </div>
 </div>
 </section>
-<section id="exploring-the-us-cdc-api" class="level1">
-<h1>Exploring the US CDC API</h1>
-<p>We visited the CDC dataset section:</p>
-<div class="quarto-figure quarto-figure-center">
+<section id="a-model-for-fairness" class="level2">
+<h2 class="anchored" data-anchor-id="a-model-for-fairness">A model for fairness</h2>
+<section id="intuitions" class="level3">
+<h3 class="anchored" data-anchor-id="intuitions">Intuitions</h3>
+<p>For a fair deck with thorough shuffling and replacement, we have an intuition that each card type has the same chance of being drawn as the top card.</p>
+<p>In 2000 draws, the <em>expected</em> number of appearances of “2 Hearts” is 2000/52, and that is the same for all card types.</p>
+</section>
+<section id="formalism" class="level3">
+<h3 class="anchored" data-anchor-id="formalism">Formalism</h3>
+<p>Formally, we can abstract from the actual names of the cards and represent the shuffling/drawing procedure in this way:</p>
+<p>Let <span class="math inline">\(i = 1, \ldots, 52\)</span> denote card types</p>
+<p>Let <span class="math inline">\(j = 1, \ldots, 2000\)</span> denote shuffle/draw/replace events</p>
+<p>Define</p>
+<p><span class="math display">\[
+C_{ij} =
+\begin{cases}
+  1 &amp; \text{if draw } j \text{ yields card type } i, \\
+  0 &amp; \text{otherwise.}
+\end{cases}
+\]</span></p>
+<p>Now define <span class="math inline">\(X_i = \sum_j C_{ij}\)</span>. Our statement above about the intuitive expectation on the number of appearances of any given card type will be written <span class="math display">\[
+EX_i = 2000/52 \text{ for all } i = 1,\ldots, 52.
+\]</span></p>
+<p>This is equivalent to the following formulation. Let <span class="math inline">\(p_i, i=1, \ldots, 52\)</span> denote the <em>probability</em> (not yet defined in any formal way) that our shuffle/draw procedure yields card of type <span class="math inline">\(i\)</span>. Then <span class="math inline">\(EX_i = 2000 p_i\)</span> for all <span class="math inline">\(i\)</span>. For the general case of <span class="math inline">\(n\)</span> draws, <span class="math inline">\(EX_i = n p_i\)</span>.</p>
+</section>
+</section>
+<section id="measuring-departure-from-fairness" class="level2">
+<h2 class="anchored" data-anchor-id="measuring-departure-from-fairness">Measuring departure from fairness</h2>
+<p>A well-established metric for assessing departure from fairness is called “chi-squared”. We will use the symbol <span class="math inline">\(D\)</span> to represent this measure. Large values of <span class="math inline">\(D\)</span> can be indicative of departure of the observed frequencies from the expected values.</p>
+<p><span class="math display">\[
+D = \sum_{i=1}^{52} \frac{(X_i - EX_i)^2}{EX_i}
+\]</span></p>
+<p>We’ll implement <span class="math inline">\(D\)</span> as <code>mystat</code> and show that it is equivalent to a quantity computed in R with <code>chisq.test</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>mystat <span class="ot">=</span> <span class="cf">function</span>(dat, expected) <span class="fu">sum</span>((<span class="fu">table</span>(dat)<span class="sc">-</span>expected)<span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>expected)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>ExpectedCount <span class="ot">=</span> <span class="dv">2000</span><span class="sc">/</span><span class="dv">52</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>((<span class="fu">table</span>(drs)<span class="sc">-</span>ExpectedCount)<span class="sc">^</span><span class="dv">2</span><span class="sc">/</span>ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 60.188</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">chisq.test</span>(<span class="fu">table</span>(drs))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Chi-squared test for given probabilities
+
+data:  table(drs)
+X-squared = 60.188, df = 51, p-value = 0.1774</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mystat</span>(drs, ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 60.188</code></pre>
+</div>
+</div>
+<p>Note that <code>chisq.test</code> reports the same statistic as <code>mystat</code>, but includes values for <code>df</code> (degrees of freedom) and <code>p-value</code>. “Degrees of freedom” refers here to the fact that we have a fixed number of count categories (52 card types), and if 51 are known, the value for the 52nd can be deduced – it is “unfree”.</p>
+<p>The p-value is a quantity that, when small, can be indicative of a departure from the expected outcome of an experiment. We will return to that concept at a later date.</p>
+</section>
+<section id="replicating-our-test-of-fairness-many-times" class="level2">
+<h2 class="anchored" data-anchor-id="replicating-our-test-of-fairness-many-times">Replicating our test of fairness many times</h2>
+<p>Any given collection of shuffle/draw events will yield a value of <span class="math inline">\(D\)</span>. Different series will yield different values of <span class="math inline">\(D\)</span>, but when the deck is fair, the variation in <span class="math inline">\(D\)</span> is prescribed by the mathematics of probability.</p>
+<p>We will make a histogram of 100 replicates of 2000 draws to exhibit variation in <span class="math inline">\(D\)</span>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>predist <span class="ot">=</span> <span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="cf">function</span>(x) <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(deck)))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>dist <span class="ot">=</span> <span class="fu">sapply</span>(predist, <span class="cf">function</span>(x)<span class="fu">mystat</span>(x, <span class="at">expected=</span><span class="dv">2000</span><span class="sc">/</span><span class="dv">52</span>))</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(dist, <span class="at">prob=</span><span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
 <figure class="figure">
-<p><img src="./cdcsets.jpg" class="img-fluid figure-img"></p>
-<figcaption>CDC topics</figcaption>
+<p><img src="20b-chisq-cards_files/figure-html/domore-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
-<p>I used the old-fashioned httr package to extract a file on waterborne illness.</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(httr)</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>z <span class="ot">=</span> <span class="fu">GET</span>(<span class="st">"https://data.cdc.gov/api/v3/views/5xkq-dg7x/query.json"</span>)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>zc <span class="ot">=</span> <span class="fu">content</span>(z)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>To see the tree structure of the data</p>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(listviewer)</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">jsonedit</span>(zc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p>We will have exercises related to this dataset. But let’s have one exploration. Let’s look for the largest waterborne outbreak in the dataset. How should we compute <code>nill</code> so that the following succeeds? Can you verify the report?</p>
-<pre><code>&gt; which(as.numeric(nill)&gt;10000)
-[1] 510 652 872
-&gt; summary(as.numeric(nill))
-     Min.   1st Qu.    Median      Mean   3rd Qu.      Max.
-     2.00      5.00     14.00     33.25     30.00 403000.00
-&gt; which(as.numeric(nill)&gt;100000)
-[1] 872
-&gt; unlist(zc[[872]])
-                       :id                   :version
-      "row-b73t.nv5m_99ab"        "rv-3pp5.uift.8zmu"
-               :created_at                :updated_at
-"2024-12-20T19:57:31.962Z" "2024-12-20T19:57:31.962Z"
-                      year                      month
-                    "1993"                        "3"
-                     state               primary_mode
-               "Wisconsin"                    "Water"
-                  etiology            etiology_status
-  "Cryptosporidium parvum"                "Confirmed"
-                   setting                  illnesses
-  "Community/municipality"                   "403000"
-                    deaths             water_exposure
-                      "50"           "Drinking water"</code></pre>
+<p>With 1000 replicates, we get a more pleasing display.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>predist <span class="ot">=</span> <span class="fu">lapply</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">1000</span>, <span class="cf">function</span>(x) <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(deck)))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>dist <span class="ot">=</span> <span class="fu">sapply</span>(predist, <span class="cf">function</span>(x)<span class="fu">mystat</span>(x, <span class="at">expected=</span><span class="dv">2000</span><span class="sc">/</span><span class="dv">52</span>))</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(dist, <span class="at">probability=</span><span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="20b-chisq-cards_files/figure-html/domore2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The form of this histogram (drawn in R with the <code>probability</code> argument set to TRUE) can be approximated by the density of the chi-squared distribution with 51 degrees of freedom.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(dist, <span class="at">probability=</span><span class="cn">TRUE</span>)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">lines</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="fu">dchisq</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>, <span class="dv">51</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="20b-chisq-cards_files/figure-html/lkdens-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The “51” fixes the degrees of freedom of the model for which the density will be drawn.</p>
+<p><strong>Nota bene.</strong> The fact that we can approximate the shape of the histogram for this fairly complicated data generation process, using the ‘density function’ for the chi-squared probability model with specified degrees of freedom, is a minor miracle building on almost two centuries of mathematical, statistical, and computational research and development.</p>
+<p>We might as well have a look at the density function for the chi-squared distribution with <span class="math inline">\(k\)</span> degrees of freedom:</p>
+<p><span class="math display">\[
+f(x; k) =
+\begin{cases}
+  \dfrac{1}{2^{k/2}\,\Gamma(k/2)}\, x^{k/2 - 1} e^{-x/2}, &amp; x &gt; 0, \\[1ex]
+  0, &amp; \text{otherwise},
+\end{cases}
+\qquad k = 1, 2, \ldots
+\]</span></p>
+<p>In our call to <code>dchisq</code> we evaluated this function at points <span class="math inline">\(x = 1, 2, ..., 100\)</span> with <span class="math inline">\(k = 51\)</span>. <span class="math inline">\(e\)</span> is Euler’s constant 2.71828… <span class="math inline">\(= \lim_{n \to \infty} \left(1 + \frac{1}{n}\right)^{n}\)</span> , and <span class="math inline">\(\Gamma\)</span> denotes the “Gamma function” defined as <span class="math inline">\(\Gamma(x) = \int\limits_{0}^{\infty} e^{-t}t^{x-1}dt\)</span> which satisfies <span class="math inline">\(\Gamma(x+1) = x\Gamma(x)\)</span>.</p>
+</section>
+<section id="interpret" class="level2">
+<h2 class="anchored" data-anchor-id="interpret">Interpret</h2>
+<p>What’s the difference between these two runs?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>baddeck <span class="ot">=</span> deck</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>baddeck[<span class="dv">1</span>] <span class="ot">=</span> baddeck[<span class="dv">52</span>]</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>newdrs <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(baddeck))</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="fu">mystat</span>(newdrs, ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 92.08246</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>baddeck[<span class="dv">2</span>] <span class="ot">=</span> baddeck[<span class="dv">51</span>]</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>newdrs <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(baddeck))</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mystat</span>(newdrs, ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 146.4929</code></pre>
+</div>
+</div>
+<p>How is this different?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>baddeck[<span class="dv">2</span>] <span class="ot">=</span> baddeck[<span class="dv">52</span>]</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>newdrs <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">2000</span>, <span class="fu">top_card</span>(baddeck))</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mystat</span>(newdrs, ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 199.8449</code></pre>
+</div>
+</div>
+<p>What’s wrong here?</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>baddeck[<span class="dv">2</span>] <span class="ot">=</span> baddeck[<span class="dv">52</span>]</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>newdrs <span class="ot">=</span> <span class="fu">replicate</span>(<span class="dv">1000</span>, <span class="fu">top_card</span>(baddeck))</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mystat</span>(newdrs, ExpectedCount)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 496.3249</code></pre>
+</div>
+</div>
+</section>
+<section id="caveat" class="level2">
+<h2 class="anchored" data-anchor-id="caveat">CAVEAT</h2>
+<p>Our theory of the distribution of <span class="math inline">\(D\)</span> depends on a few assumptions. The most important one is that the events underlying contributions to <span class="math inline">\(D\)</span> are <em>independent</em>.</p>
+<p>Establishing independence in real-world contexts is often very difficult. One must be very vigilant, searching for hidden sources of dependence between events emerging from measurement processes.</p>
+</section>
+<section id="exercise" class="level2">
+<h2 class="anchored" data-anchor-id="exercise">EXERCISE</h2>
+<p>Go through this document changing the random process from sampling from a deck of playing cards to rolling a fair or biased 6-sided die.</p>
 
 
 </section>
@@ -749,4 +898,4 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/vjcitn/2026vjc/blob/main/slides/prob/20-sep23-cards-cdc.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div></div></footer></body></html>
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/vjcitn/2026vjc/blob/main/slides/prob/20b-chisq-cards.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li></ul></div></div></div></footer></body></html>
