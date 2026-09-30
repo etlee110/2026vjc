@@ -137,7 +137,7 @@ Your team will select from a list of available data science projects or propose 
 
 - **Team Collaboration**: Work in assigned teams of 4-5 students
 - **Reproducible Analysis**: Submit via GitHub repository with all code and data
-- **Oral Presentation**: 20-minute team presentation scheduled between December 16-19
+- **Oral Presentation**: 20-minute team presentation scheduled between December 15-18
 - **Individual Accountability**: All team members must participate and demonstrate understanding of their contributions
 
 ### AI Policy
